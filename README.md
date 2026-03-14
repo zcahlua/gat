@@ -1,67 +1,143 @@
-# GAT
-Graph Attention Networks (Veličković *et al.*, ICLR 2018): [https://arxiv.org/abs/1710.10903](https://arxiv.org/abs/1710.10903)
+# PyTorch dense-GAT baseline for QM9 graph-level regression
 
-GAT layer            |  t-SNE + Attention coefficients on Cora
-:-------------------------:|:-------------------------:
-![](https://camo.githubusercontent.com/4fe1a90e67d17a2330d7cfcddc930d5f7501750c/68747470733a2f2f7777772e64726f70626f782e636f6d2f732f71327a703170366b37396a6a6431352f6761745f6c617965722e706e673f7261773d31)  |  ![](https://raw.githubusercontent.com/PetarV-/GAT/gh-pages/assets/t-sne.png)
+This repository is now **a PyTorch dense-GAT baseline for QM9 graph-level regression adapted from a legacy GAT repo**.
 
-## Overview
-Here we provide the implementation of a Graph Attention Network (GAT) layer in TensorFlow, along with a minimal execution example (on the Cora dataset). The repository is organised as follows:
-- `data/` contains the necessary dataset files for Cora;
-- `models/` contains the implementation of the GAT network (`gat.py`);
-- `pre_trained/` contains a pre-trained Cora model (achieving 84.4% accuracy on the test set);
-- `utils/` contains:
-    * an implementation of an attention head, along with an experimental sparse version (`layers.py`);
-    * preprocessing subroutines (`process.py`);
-    * preprocessing utilities for the PPI benchmark (`process_ppi.py`).
-
-Finally, `execute_cora.py` puts all of the above together and may be used to execute a full training run on Cora.
-
-## Sparse version
-An experimental sparse version is also available, working only when the batch size is equal to 1.
-The sparse model may be found at `models/sp_gat.py`.
-
-You may execute a full training run of the sparse model on Cora through `execute_cora_sparse.py`.
+The old TensorFlow 1.x/Cora node-classification pipeline has been replaced with a modern graph-level regression workflow built on PyTorch + PyG.
 
 ## Dependencies
 
-The script has been tested running under Python 3.5.2, with the following packages installed (along with their dependencies):
+Install core dependencies:
 
-- `numpy==1.14.1`
-- `scipy==1.0.0`
-- `networkx==2.1`
-- `tensorflow-gpu==1.6.0`
-
-In addition, CUDA 9.0 and cuDNN 7 have been used.
-
-## Reference
-If you make advantage of the GAT model in your research, please cite the following in your manuscript:
-
-```
-@article{
-  velickovic2018graph,
-  title="{Graph Attention Networks}",
-  author={Veli{\v{c}}kovi{\'{c}}, Petar and Cucurull, Guillem and Casanova, Arantxa and Romero, Adriana and Li{\`{o}}, Pietro and Bengio, Yoshua},
-  journal={International Conference on Learning Representations},
-  year={2018},
-  url={https://openreview.net/forum?id=rJXMpikCZ},
-  note={accepted as poster},
-}
+```bash
+pip install -r requirements.txt
 ```
 
-For getting started with GATs, as well as graph representation learning in general, we **highly** recommend the [pytorch-GAT](https://github.com/gordicaleksa/pytorch-GAT) repository by [Aleksa Gordić](https://github.com/gordicaleksa). It ships with an inductive (PPI) example as well.
+Required:
+- `torch`
+- `torch_geometric`
 
-GAT is a popular method for graph representation learning, with optimised implementations within virtually all standard GRL libraries:
-- \[PyTorch\] [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/)
-- \[PyTorch/TensorFlow\] [Deep Graph Library](https://www.dgl.ai/)
-- \[TensorFlow\] [Spektral](https://graphneural.network/)
-- \[JAX\] [jraph](https://github.com/deepmind/jraph)
+Optional:
+- `rdkit` (some QM9 processing environments)
+- `ase` (only for optional SchNet-style `qm9.db` input)
 
-We recommend using either one of those (depending on your favoured framework), as their implementations have been more readily battle-tested.
+## Targets and naming
 
-Early on post-release, two unofficial ports of the GAT model to various frameworks quickly surfaced. To honour the effort of their developers as early adopters of the GAT layer, we leave pointers to them here.
-- \[Keras\] [keras-gat](https://github.com/danielegrattarola/keras-gat), developed by [Daniele Grattarola](https://github.com/danielegrattarola);
-- \[PyTorch\] [pyGAT](https://github.com/Diego999/pyGAT), developed by [Diego Antognini](https://github.com/Diego999).
+Supported target names and QM9 indices:
 
-## License
-MIT
+- `mu` -> 0
+- `alpha` -> 1
+- `homo` -> 2
+- `lumo` -> 3
+- `gap` -> 4
+- `r2` -> 5
+- `zpve` -> 6
+- `energy_U0` -> 7
+- `energy_U` -> 8
+- `enthalpy_H` -> 9
+- `free_G` -> 10
+- `Cv` -> 11
+- `atomization_U0` -> 12
+- `atomization_U` -> 13
+- `atomization_H` -> 14
+- `atomization_G` -> 15
+
+## Training
+
+### Example: `energy_U0`
+
+```bash
+python train_qm9.py \
+  --data_dir ./data/qm9 \
+  --target energy_U0 \
+  --batch_size 64 \
+  --epochs 200 \
+  --lr 1e-3 \
+  --weight_decay 1e-6 \
+  --patience 30 \
+  --hidden_dim 128 \
+  --num_layers 4 \
+  --num_heads 4 \
+  --dropout 0.1 \
+  --residual \
+  --seed 42 \
+  --split_path splits/qm9_split.json \
+  --ntrain 100000 \
+  --nval 10000 \
+  --ntest 10831 \
+  --checkpoint_dir checkpoints \
+  --use_atomref \
+  --graph_mode dataset
+```
+
+### Example: `gap`
+
+```bash
+python train_qm9.py \
+  --data_dir ./data/qm9 \
+  --target gap \
+  --batch_size 64 \
+  --epochs 200 \
+  --lr 1e-3 \
+  --weight_decay 1e-6 \
+  --patience 30 \
+  --hidden_dim 128 \
+  --num_layers 4 \
+  --num_heads 4 \
+  --dropout 0.1 \
+  --residual \
+  --seed 42 \
+  --split_path splits/qm9_split.json \
+  --ntrain 100000 \
+  --nval 10000 \
+  --ntest 10831 \
+  --checkpoint_dir checkpoints \
+  --graph_mode dataset
+```
+
+## What the pipeline does
+
+### Default dataset path
+
+By default, data is read from `torch_geometric.datasets.QM9` using `--data_dir` as the PyG root directory.
+
+Optional compatibility mode: if `--data_dir` points directly to a `.db` file, the code attempts to read SchNet-style `qm9.db` via ASE.
+
+### Dense masked batching
+
+Even though QM9 is loaded as sparse PyG graphs, each batch is converted to dense tensors to stay close to legacy dense-GAT behavior:
+
+- node features: `[B, N, F]`
+- adjacency mask: `[B, N, N]`
+- valid-node mask: `[B, N]`
+- scalar targets: `[B, 1]`
+
+`to_dense_batch` and `to_dense_adj` are used, self-loops are always included, and masks explicitly prevent padded nodes from participating in attention or pooling.
+
+### Graph connectivity modes
+
+- `--graph_mode dataset` (default): use QM9 graph structure from dataset edges.
+- `--graph_mode cutoff --cutoff <float>`: rebuild adjacency from pairwise distances over 3D coordinates.
+
+### Target normalization
+
+Targets are standardized with **train-split statistics only**:
+
+- train mean/std computed on selected target
+- model trained on normalized target (or normalized residual when atomref is enabled)
+- MAE is reported in original units by inverting normalization before metric computation
+
+### Optional atomref support
+
+With `--use_atomref`, the script attempts `dataset.atomref(target_idx)` for:
+
+- `zpve`, `energy_U0`, `energy_U`, `enthalpy_H`, `free_G`, `Cv`
+
+If available, training uses residual targets (`target - atomref_baseline`), then atomref is added back for validation/test metrics.
+If unavailable, atomref is disabled with a warning and training continues.
+
+## Repository layout
+
+- `datasets/qm9_dataset.py`: target mapping, data loading, split handling, target stats, atomref helpers
+- `models/gat_qm9.py`: dense multi-head GAT layers + graph-level regression head
+- `train_qm9.py`: full train/val/test loop with early stopping and checkpoint restore
+- `legacy/`: archived legacy TensorFlow/Cora code and artifacts

@@ -1,2 +1,3 @@
-from .gat import GAT
-from .sp_gat import SpGAT
+from .gat_qm9 import GATQM9Regressor
+
+__all__ = ["GATQM9Regressor"]

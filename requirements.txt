@@ -1,0 +1,6 @@
+torch>=2.1
+torch_geometric>=2.5
+# Optional for chemistry preprocessing in some environments:
+rdkit
+# Optional: only needed when explicitly loading SchNet-style qm9.db
+ase
